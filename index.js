@@ -33,7 +33,8 @@ var c = new Crawler({
                 var memberLikes = r.find('div.memberBadgingNoText .badgetext').eq(1).text();
                 
                 if(more !== '') {
-                    console.log.more[0];
+                    console.log(more[0]);
+                    more[0].click();
                 }
                  
                 var line = '"' + memberName + '",' + memberReviews + ',' + memberLikes + ',' + rating + ',"' + title + '","' + comment + '","'  + date + '"\n';
