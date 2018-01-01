@@ -1,9 +1,10 @@
 var fs = require('fs');
 var Crawler = require('crawler');
 
-var cards = ['Território dos Necrófagos', 'Gancho da Condenação', 'Sanidade Corroída'];
+var cards = ['Ivy Elemental', 'Llanowar Elves'];
 var cotacoes = [];
 var lojas = [];
+var lojasCardsMinValor = []
 
 var c = new Crawler({
     maxConnections: 1,
@@ -18,6 +19,8 @@ var c = new Crawler({
 
             var $ = res.$;
 
+            var card = $('p.subtitulo-card').text();
+
             var table = $('#cotacao-1 tr').each(function (index, value) {
 
                 var loja = $('#cotacao-1 tr').eq(index).find('td').eq(0).find('img.icon').eq(0)[0];
@@ -25,6 +28,26 @@ var c = new Crawler({
                 if (typeof loja !== 'undefined') {
 
                     loja = loja.attribs.title;
+
+                    var indexLoja = lojas.indexOf(loja);
+
+                    if (indexLoja === -1) {
+                        lojas.push(loja);
+                    }
+
+                    indexLoja = lojas.indexOf(loja);
+
+                    if (typeof lojasCardsMinValor[indexLoja] === 'undefined') {
+
+                        lojasCardsMinValor[indexLoja] = [];
+
+                    }
+
+                    if (typeof lojasCardsMinValor[indexLoja][card] === 'undefined') {
+
+                        lojasCardsMinValor[indexLoja][card] = 0;
+
+                    }
 
                     var foil = $('#cotacao-1 tr').eq(index).find('td').eq(1).text();
                     foil = (foil.match(/Foil/g) || []).length;
@@ -49,38 +72,43 @@ var c = new Crawler({
 
                             valor = parseFloat(valor.replace(',', '.'));
 
-//                            console.log(loja, valor); 
+                            if (lojasCardsMinValor[indexLoja][card] === 0) {
 
-                            var index = lojas.indexOf(loja);
+                              lojasCardsMinValor[indexLoja][card] = valor;
 
-                            if (index === -1) {
-                                lojas.push(loja);
-                            }
+                              if (typeof cotacoes[indexLoja] === 'undefined') {
 
-                            index = lojas.indexOf(loja);
-
-                            if (typeof cotacoes[index] === 'undefined') {
-
-                                cotacoes[index] = {
-                                    nome: loja,
-                                    cards: 1,
-                                    total: valor
+                                cotacoes[indexLoja] = {
+                                  nome: loja,
+                                  cards: 1,
+                                  total: valor
                                 };
 
-                            } else {
+                              } else {
 
-                                cotacoes[index].cards += 1;
-                                cotacoes[index].total += valor;
+                                cotacoes[indexLoja].cards += 1;
+                                cotacoes[indexLoja].total += valor;
+
+                              }
+
+                            } else if (lojasCardsMinValor[indexLoja][card] > 0
+                                      && valor < lojasCardsMinValor[indexLoja][card]) {
+
+
+                              cotacoes[indexLoja].total -= lojasCardsMinValor[indexLoja][card];
+                              cotacoes[indexLoja].total += valor;
+
+                              lojasCardsMinValor[indexLoja][card] = valor;
 
                             }
+
+//console.log(loja, card, valor, lojasCardsMinValor[indexLoja][card]);
 
                         }
 
                     }
 
-
                 }
-
 
             });
 
@@ -113,7 +141,7 @@ c.on('request', function (options) {
 c.on('drain', function (options) {
 
     cotacoes.sort(function(a, b){
-        return a.total - b.total;
+        return (a.cards > b.cards) ? -1 : 1;
     });
     console.log(cotacoes);
 
